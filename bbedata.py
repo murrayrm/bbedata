@@ -6,6 +6,7 @@ import numpy as np
 import re
 import warnings
 from html.parser import HTMLParser
+from scholarly import scholarly
 from math import nan
 
 # Module version number
@@ -416,8 +417,35 @@ def update_teaching_matrix(teaching_df, survey_df, verbose=False):
             for i, name in enumerate(names):
                 for rule in name_rules:
                     name = re.sub(rule[0], rule[1], name)
-                names[i] = name.strip().capitalize()
+                names[i] = name.strip()
+            names = sorted(names)
                 
             if verbose:
                 print(teaching_name, pref, ":", names)
             teaching_df.at[index, pref] = "; ".join(names)
+
+def find_bbe_coauthors(
+        name, institution="Caltech", start=2015, verbose=True):
+    search_query = scholarly.search_author(name + ", " + institution)
+    author = scholarly.fill(next(search_query))
+
+    coauthors = set()
+    for i, pub in enumerate(author['publications']):
+        # Make sure this is within the date range that we care about
+        try:
+            if int(pub['bib']['pub_year']) < start:
+                # Skip this entry
+                continue
+            elif verbose:
+                print(i, end=" ", flush=True)
+        except KeyError:
+            continue
+            
+        # Get the full data
+        pub = scholarly.fill(pub)
+        
+        for author in pub['bib']['author'].split("and"):
+            coauthors.add(author.strip())
+
+    print("")
+    return coauthors
