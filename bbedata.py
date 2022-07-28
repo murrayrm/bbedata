@@ -7,7 +7,7 @@ import re
 import warnings
 from html.parser import HTMLParser
 from scholarly import scholarly
-from math import nan
+from math import nan, isnan
 
 # Module version number
 __version__ = '1.0.0'
@@ -247,7 +247,8 @@ def read_regis_data(
             
             # If this is a new section, add up enrollments
             if section != entry["SECTION"]:
-                enrolled += int(entry["NUM_ENROLLED"])
+                if not isnan(entry["NUM_ENROLLED"]):
+                    enrolled += int(entry["NUM_ENROLLED"])
                 section = entry["SECTION"]      # keep track of new section
                 sections += 1
 
@@ -269,8 +270,11 @@ def read_regis_data(
             title = entry["OFFERING_TITLE"]
             section, sections = entry["SECTION"], 1     # track id & count
             instructors = {normalize_name(              # store as set
-                entry["INSTRUCTOR"], last_name_only=last_name_only)}  
-            enrolled = int(entry["NUM_ENROLLED"])
+                entry["INSTRUCTOR"], last_name_only=last_name_only)}
+            if not isnan(entry["NUM_ENROLLED"]):
+                enrolled = int(entry["NUM_ENROLLED"])
+            else:
+                enrolled = 0
             research = entry["Research"] == 'Y'
             option = entry["DEPARTMENT_NAME"]
             division = re.sub("Bi", "BBE", entry["DIVISION"])
@@ -346,7 +350,7 @@ def load_teaching_survey(filename):
     return survey_df
 
 # Update teaching matrix with new data
-def update_teaching_matrix(teaching_df, survey_df, verbose=False):
+def survey_update(teaching_df, survey_df, verbose=False):
     """Update an existing teaching matrix with new data, by course number.
 
     This function takes a dataframe corresponding to a teaching matrix and
